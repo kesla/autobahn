@@ -19,5 +19,6 @@
   },
   "repository": "",
   "author": "David Björklund <david.bjorklund@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "preferGlobal": true
 }
