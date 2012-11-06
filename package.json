@@ -11,7 +11,8 @@
     "colors": "~0.6.0-1"
   },
   "bin": {
-    "autobahn": "./cmd.js"
+    "autobahn": "./cmd.js",
+    "bahn": "./cmd.js"
   },
   "devDependencies": {},
   "scripts": {
