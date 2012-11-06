@@ -8,7 +8,8 @@
     "npm": "~1.1.65",
     "graceful-fs": "~1.1.14",
     "resolve": "~0.2.3",
-    "colors": "~0.6.0-1"
+    "colors": "~0.6.0-1",
+    "semver": "~1.1.0"
   },
   "bin": {
     "autobahn": "./cmd.js",

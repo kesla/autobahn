@@ -43,8 +43,10 @@ var npm = require('npm');
 var fs = require('graceful-fs');
 var detective = require('detective');
 var resolve = require('resolve');
+var semver = require('semver');
 require('colors');
 var script;
+var dependencies;
 
 var toInstall = [];
 var visited = [];
@@ -60,12 +62,22 @@ function log() {
 function installPackage(pkg) {
     if (resolve.isCore(pkg)) return;
 
+    if (toInstall.indexOf(pkg) !== -1) return;
+
     try {
-        resolve.sync(pkg, {
+        var resolved = resolve.sync(pkg, {
             basedir: process.cwd()
         });
     } catch (e) {
-        if (toInstall.indexOf(pkg) === -1) toInstall.push(pkg);
+        toInstall.push(pkg);
+        return;
+    }
+    if (!dependencies) return;
+
+    var actual = require(npm.prefix + '/node_modules/' + pkg + '/package.json').version;
+    var expected = dependencies[pkg];
+    if (actual && expected && !semver.satisfies(actual, expected)) {
+        toInstall.push(pkg);
     }
 }
 
@@ -115,6 +127,26 @@ function init(callback) {
 
         if (opts.save) {
             npm.config.set('save', true);
+        }
+
+        try{
+            packageJson = require(npm.prefix + '/package.json');
+
+            if (packageJson.dependencies) {
+                dependencies = dependencies || {};
+                Object.keys(packageJson.dependencies).forEach(function(key) {
+                    dependencies[key] = packageJson.dependencies[key];
+                });
+            }
+
+            if (packageJson.devDependencies) {
+                dependencies = dependencies || {};
+                Object.keys(packageJson.devDependencies).forEach(function(key) {
+                    devDependencies[key] = packageJson.devDependencies[key];
+                });
+            }
+        } catch(e) {
+            if (e.code !== 'MODULE_NOT_FOUND') throw e;
         }
 
         callback();
