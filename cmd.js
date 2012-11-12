@@ -142,7 +142,7 @@ function init(callback) {
             if (packageJson.devDependencies) {
                 dependencies = dependencies || {};
                 Object.keys(packageJson.devDependencies).forEach(function(key) {
-                    devDependencies[key] = packageJson.devDependencies[key];
+                    dependencies[key] = packageJson.devDependencies[key];
                 });
             }
         } catch(e) {
