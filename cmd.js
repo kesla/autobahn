@@ -186,6 +186,7 @@ function fork() {
 
     onexit = function(code, signal) {
         log('script exited, exit code: %s, signal: %s', code, signal);
+        if (!opts.watch) process.exit();
     }
 
     loading = false;
