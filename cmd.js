@@ -168,6 +168,10 @@ function install(callback) {
             return;
         }
 
+        toInstall = toInstall.map(function(pkg) {
+            return dependencies[pkg]? pkg + '@' + dependencies[pkg] : pkg;
+        });
+
         npm.commands.install(toInstall, callback);
     });
 }
