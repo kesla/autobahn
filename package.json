@@ -1,6 +1,6 @@
 {
   "name": "autobahn",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Run `autobahn` instead of `node`, get dependencies installed automatically (and more)",
   "main": "cmd.js",
   "dependencies": {
