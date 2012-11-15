@@ -76,6 +76,10 @@ function installPackage(pkg) {
 
     var actual = require(npm.prefix + '/node_modules/' + pkg + '/package.json').version;
     var expected = dependencies[pkg];
+    // console.log(actual, expected);
+    // validRange rewrites the range and returns null if it's not a valid range
+    // like with dependencies on http
+    expected = semver.validRange(expected);
     if (actual && expected && !semver.satisfies(actual, expected)) {
         toInstall.push(pkg);
     }
@@ -169,7 +173,7 @@ function install(callback) {
         }
 
         toInstall = toInstall.map(function(pkg) {
-            return dependencies[pkg]? pkg + '@' + dependencies[pkg] : pkg;
+            return (dependencies && dependencies[pkg])? pkg + '@' + dependencies[pkg] : pkg;
         });
 
         npm.commands.install(toInstall, callback);
