@@ -79,8 +79,8 @@ function installPackage(pkg) {
     // console.log(actual, expected);
     // validRange rewrites the range and returns null if it's not a valid range
     // like with dependencies on http
-    expected = semver.validRange(expected);
-    if (actual && expected && !semver.satisfies(actual, expected)) {
+    if (actual && expected && semver.validRange(expected) &&
+            !semver.satisfies(actual, expected)) {
         toInstall.push(pkg);
     }
 }
