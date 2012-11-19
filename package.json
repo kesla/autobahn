@@ -1,27 +1,26 @@
 {
-  "name": "autobahn",
-  "version": "0.0.5",
-  "description": "Run `autobahn` instead of `node`, get dependencies installed automatically (and more)",
-  "main": "cmd.js",
-  "dependencies": {
-    "detective": "~0.2.1",
-    "npm": "~1.1.65",
-    "graceful-fs": "~1.1.14",
-    "resolve": "~0.2.3",
-    "colors": "~0.6.0-1",
-    "semver": "~1.1.0",
-    "nodefly": "stable"
-  },
+  "author": "David Björklund <david.bjorklund@gmail.com>",
   "bin": {
     "autobahn": "./cmd.js",
     "bahn": "./cmd.js"
   },
+  "dependencies": {
+    "colors": "~0.6.0-1",
+    "detective": "~0.2.1",
+    "graceful-fs": "~1.1.14",
+    "npm": "~1.1.65",
+    "resolve": "~0.2.3",
+    "semver": "~1.1.0"
+  },
+  "description": "Run `autobahn` instead of `node`, get dependencies installed automatically (and more)",
   "devDependencies": {},
+  "license": "MIT",
+  "main": "cmd.js",
+  "name": "autobahn",
+  "preferGlobal": true,
+  "repository": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": "",
-  "author": "David Björklund <david.bjorklund@gmail.com>",
-  "license": "MIT",
-  "preferGlobal": true
+  "version": "0.0.5"
 }

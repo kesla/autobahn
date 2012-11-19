@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 var path = require('path');
+var checkError = require('syntax-error');
 
 var usage = [
     'Use autobahn instead of node and get all dependencies automatically installed',
@@ -100,6 +101,8 @@ function visit(file, basedir, callback) {
         str = str.replace(/^#!.*\n/, '');
         // put str in function (to allow return statement in a module)
         str = '(function() {\n' + str + '\n})();';
+        var err = checkError(str);
+        if (err) return callback(err);
 
         var dependencies = detective(str);
         var i = dependencies.length;
