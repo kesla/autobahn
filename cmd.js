@@ -102,9 +102,14 @@ function visit(file, basedir, callback) {
         // put str in function (to allow return statement in a module)
         str = '(function() {\n' + str + '\n})();';
         var err = checkError(str);
-        if (err) return callback(err);
+        if (err) {
+            console.log(err);
+            return callback(err);
+        }
 
-        var dependencies = detective(str);
+        var dependencies = detective(str).filter(function(dependency) {
+            return !dependency.match(/\.json$/);
+        });
         var i = dependencies.length;
 
         if (i === 0) {
