@@ -86,22 +86,22 @@ function installPackage(pkg) {
     }
 }
 
-function visit(file, basedir, callback) {
-    file = resolve.sync(file, {
+function visit(filename, basedir, callback) {
+    filename = resolve.sync(filename, {
         basedir: basedir
     });
 
-    if (visited.indexOf(file) !== -1) return callback();
-    visited.push(file);
+    if (visited.indexOf(filename) !== -1) return callback();
+    visited.push(filename);
 
-    fs.readFile(file, 'utf8', function(err, str) {
+    fs.readFile(filename, 'utf8', function(err, str) {
         if (err) return callback(err);
 
         // remove hashbang
         str = str.replace(/^#!.*\n/, '');
         // put str in function (to allow return statement in a module)
         str = '(function() {\n' + str + '\n})();';
-        var err = checkError(str);
+        var err = checkError(str, filename);
         if (err) {
             console.log(err);
             return callback(err);
@@ -123,7 +123,7 @@ function visit(file, basedir, callback) {
 
         dependencies.forEach(function(dependency) {
             if (dependency[0] === '.') {
-                var basedir = path.dirname(file);
+                var basedir = path.dirname(filename);
                 visit(dependency, basedir, done);
             } else {
                 installPackage(dependency);
