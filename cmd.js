@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 
+var util = require('util');
 var path = require('path');
-var checkError = require('syntax-error');
+var cp = require('child_process');
+var fs = require('graceful-fs');
+
+var checkSyntax = require('syntax-error');
+var npm = require('npm');
+var detective = require('detective');
+var resolve = require('resolve');
+var semver = require('semver');
+require('colors');
+var async = require('async');
 
 var usage = [
     'Use autobahn instead of node and get all dependencies automatically installed',
@@ -18,7 +28,6 @@ var opts = {
     save: false
 };
 var args = process.argv.slice(2);
-var program;
 
 var arg;
 while (arg = args.shift()) {
@@ -39,51 +48,55 @@ if (args.length === 0) {
     return console.log(usage);
 }
 
-var cp = require('child_process');
-var npm = require('npm');
-var fs = require('graceful-fs');
-var detective = require('detective');
-var resolve = require('resolve');
-var semver = require('semver');
-require('colors');
-var script;
+var child = null;
 var dependencies;
 
 var toInstall = [];
 var visited = [];
 var watching = [];
 
-var util = require('util');
-
 function log() {
     var msg = util.format.apply(util, arguments);
     console.log('['.white + 'autobahn'.magenta + ']'.white, msg);
 }
 
-function installPackage(pkg) {
-    if (resolve.isCore(pkg)) return;
+function isCore(pkg) {
+    // check for domain explicitly since it's not (yet) part of resolve.isCore
+    return (resolve.isCore(pkg) || pkg === 'domain');
+}
 
-    if (toInstall.indexOf(pkg) !== -1) return;
+function installPackage(pkg, callback) {
+    // avoid core packages and packages already scheduled to be installed
+    if (isCore(pkg) || toInstall.indexOf(pkg) !== -1) return callback(null);
 
+    // test and see if the package can be resolved
     try {
         var resolved = resolve.sync(pkg, {
             basedir: process.cwd()
         });
     } catch (e) {
         toInstall.push(pkg);
-        return;
+        return callback(null);
     }
-    if (!dependencies) return;
+    if (!dependencies) return callback(null);
 
-    var actual = require(npm.prefix + '/node_modules/' + pkg + '/package.json').version;
-    var expected = dependencies[pkg];
-    // console.log(actual, expected);
-    // validRange rewrites the range and returns null if it's not a valid range
-    // like with dependencies on http
-    if (actual && expected && semver.validRange(expected) &&
-            !semver.satisfies(actual, expected)) {
-        toInstall.push(pkg);
-    }
+    var filePath = path.resolve(
+        npm.prefix, 'node_modules', pkg, 'package.json'
+    );
+    fs.readFile(filePath, 'utf8', function(err, packageJson) {
+        if (err) return callback(err);
+
+        var actual = JSON.parse(packageJson).version;
+        var expected = dependencies[pkg];
+
+        // validRange rewrites the range and returns null if it's not a valid
+        // range like with depending on github project or similar
+        if (actual && expected && semver.validRange(expected) &&
+                !semver.satisfies(actual, expected)) {
+            toInstall.push(pkg);
+        }
+        callback(null);
+    });
 }
 
 function visit(filename, basedir, callback) {
@@ -101,68 +114,66 @@ function visit(filename, basedir, callback) {
         str = str.replace(/^#!.*\n/, '');
         // put str in function (to allow return statement in a module)
         str = '(function() {\n' + str + '\n})();';
-        var err = checkError(str, filename);
+        var err = checkSyntax(str, filename);
         if (err) {
             console.log(err);
             return callback(err);
         }
 
+        // avoid json-dependencies
         var dependencies = detective(str).filter(function(dependency) {
             return !dependency.match(/\.json$/);
         });
-        var i = dependencies.length;
 
-        if (i === 0) {
-            return callback();
-        }
-
-        function done() {
-            i--;
-            if (i === 0) return callback();
-        }
-
-        dependencies.forEach(function(dependency) {
+        async.forEach(dependencies, function(dependency, done) {
             if (dependency[0] === '.') {
                 var basedir = path.dirname(filename);
                 visit(dependency, basedir, done);
             } else {
-                installPackage(dependency);
-                done();
+                installPackage(dependency, done);
             }
-        });
+        }, callback);
     });
 }
 
 function init(callback) {
-    npm.load(function(err) {
-        if (err) return callback(err);
-
-        if (opts.save) {
-            npm.config.set('save', true);
-        }
-
-        try{
-            packageJson = require(npm.prefix + '/package.json');
-
-            if (packageJson.dependencies) {
-                dependencies = dependencies || {};
-                Object.keys(packageJson.dependencies).forEach(function(key) {
-                    dependencies[key] = packageJson.dependencies[key];
-                });
+    dependencies = {};
+    async.series([
+        function loadNpm(done) {
+            npm.load(done);
+        },
+        function parsePackageJson(done) {
+            if (opts.save) {
+                npm.config.set('save', true);
             }
 
-            if (packageJson.devDependencies) {
-                dependencies = dependencies || {};
-                Object.keys(packageJson.devDependencies).forEach(function(key) {
-                    dependencies[key] = packageJson.devDependencies[key];
-                });
-            }
-        } catch(e) {
-            if (e.code !== 'MODULE_NOT_FOUND') throw e;
-        }
+            var filePath = path.resolve(npm.prefix, 'package.json');
+            fs.readFile(filePath, 'utf8', function(err, packageJson) {
+                if (err) {
+                    done(err.code === 'ENOENT' ? null : err);
+                    return;
+                }
 
-        callback();
-    });
+                packageJson = JSON.parse(packageJson);
+
+                if (packageJson.dependencies) {
+                    var keys = Object.keys(packageJson.dependencies);
+                    keys.forEach(function(key) {
+                        dependencies[key] = packageJson.dependencies[key];
+                    });
+                }
+
+                if (packageJson.devDependencies) {
+                    var keys = Object.keys(packageJson.devDependencies)
+                    keys.forEach(function(key) {
+                        dependencies[key] = packageJson.devDependencies[key];
+                    });
+                }
+                done(null);
+            });
+        }],
+        callback
+    );
 }
 
 var loading = false;
@@ -181,7 +192,7 @@ function install(callback) {
         }
 
         toInstall = toInstall.map(function(pkg) {
-            return (dependencies && dependencies[pkg])? pkg + '@' + dependencies[pkg] : pkg;
+            return dependencies[pkg]? pkg + '@' + dependencies[pkg] : pkg;
         });
 
         npm.commands.install(toInstall, callback);
@@ -190,9 +201,9 @@ function install(callback) {
 
 function fork() {
     log('(re)starting');
-    script = cp.spawn('node', args, { stdio: 'inherit' });
-    script.once('exit', function() {
-        script = null;
+    child = cp.spawn('node', args, { stdio: 'inherit' });
+    child.once('exit', function() {
+        child = null;
         onexit.apply(null, arguments);
     });
 
@@ -204,51 +215,50 @@ function fork() {
     loading = false;
 }
 
-function watch() {
-    if (script) {
-        onexit = function() {
-            log('script exited, to restart it later');
-            watch();
-        }
-        script.kill();
-        return;
-    }
+function killChild(callback) {
+    if (!child) return callback();
 
+    onexit = function() {
+        log('script exited, to restart it soon');
+        callback();
+    }
+    child.kill();
+}
+
+function watch() {
     if (loading) return;
     loading = true;
 
-    install(function(err) {
-        if (err) throw err;
+    async.series([
+            init, install
+        ],
+        function(err) {
+            if (err) throw err;
 
-        fork();
+            fork();
 
-        visited.forEach(function(file) {
-            if (watching.indexOf(file) === -1) {
-                watching.push(file);
-                fs.watchFile(file, { interval: 500 }, function() {
-                    watching.forEach(fs.unwatchFile);
-                    watching.length = 0;
-                    init(function(err) {
-                        if (err) throw err;
-
+            visited.forEach(function(file) {
+                if (watching.indexOf(file) === -1) {
+                    watching.push(file);
+                    fs.watchFile(file, { interval: 500 }, function() {
+                        watching.forEach(fs.unwatchFile);
+                        watching.length = 0;
                         watch();
                     });
-                });
-            }
-        });
-    });
+                }
+            });
+        }
+    );
 }
 
-init(function(err) {
-    if (err) throw err;
-
-    if (opts.watch) {
-        return watch();
-    }
-
-    install(function(err) {
+if (opts.watch) {
+    watch();
+} else {
+    async.series([
+        init, install
+    ],
+    function(err) {
         if (err) throw err;
-
         fork();
     });
-});
+}

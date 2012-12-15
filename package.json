@@ -5,6 +5,7 @@
     "bahn": "./cmd.js"
   },
   "dependencies": {
+    "async": "~0.1.22",
     "colors": "~0.6.0-1",
     "detective": "~0.2.1",
     "graceful-fs": "~1.1.14",
