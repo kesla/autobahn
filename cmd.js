@@ -115,10 +115,7 @@ function visit(filename, basedir, callback) {
         // put str in function (to allow return statement in a module)
         str = '(function() {\n' + str + '\n})();';
         var err = checkSyntax(str, filename);
-        if (err) {
-            console.log(err);
-            return callback(err);
-        }
+        if (err) return callback(err);
 
         // avoid json-dependencies
         var dependencies = detective(str).filter(function(dependency) {
@@ -184,7 +181,7 @@ function install(callback) {
     visited.length = 0;
 
     visit(args[0], process.cwd(), function(err) {
-        if (err) throw err;
+        if (err) return callback(err);
 
         if (toInstall.length === 0) {
             callback();
@@ -233,12 +230,9 @@ function watch() {
             init, install
         ],
         function(err) {
-            if (err) throw err;
-
-            fork();
-
             visited.forEach(function(file) {
                 if (watching.indexOf(file) === -1) {
+                    console.log('watching %s', file);
                     watching.push(file);
                     fs.watchFile(file, { interval: 500 }, function() {
                         watching.forEach(fs.unwatchFile);
@@ -247,6 +241,15 @@ function watch() {
                     });
                 }
             });
+            if (err) {
+                // deal with error by writing it out and stop execution - so
+                // the watch will still be there but no fork will be unleached
+                console.error(err);
+                loading = false;
+                return;
+            }
+
+            fork();
         }
     );
 }
