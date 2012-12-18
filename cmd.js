@@ -227,7 +227,7 @@ function watch() {
     loading = true;
 
     async.series([
-            init, install
+            killChild, init, install
         ],
         function(err) {
             visited.forEach(function(file) {
