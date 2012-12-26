@@ -48,6 +48,10 @@ if (args.length === 0) {
     return console.log(usage);
 }
 
+// change to correct directory, so that `autobahn foo/bar.js` won't install 
+// modules in ./node_modules/
+process.chdir(path.dirname(args[0]));
+
 var child = null;
 var dependencies;
 
