@@ -48,10 +48,6 @@ if (args.length === 0) {
     return console.log(usage);
 }
 
-// change to correct directory, so that `autobahn foo/bar.js` won't install 
-// modules in ./node_modules/
-process.chdir(path.dirname(args[0]));
-
 var child = null;
 var dependencies;
 
@@ -76,7 +72,7 @@ function installPackage(pkg, callback) {
     // test and see if the package can be resolved
     try {
         var resolved = resolve.sync(pkg, {
-            basedir: process.cwd()
+            basedir: npm.prefix
         });
     } catch (e) {
         toInstall.push(pkg);
@@ -141,7 +137,13 @@ function init(callback) {
     dependencies = {};
     async.series([
         function loadNpm(done) {
-            npm.load(done);
+            npm.load(function(err) {
+                if (err) return done(err);
+                // change to correct directory, so that `autobahn foo/bar.js` won't install 
+                // modules in ./node_modules/
+                npm.prefix = path.dirname(args[0]);
+                done(null);
+            });
         },
         function parsePackageJson(done) {
             if (opts.save) {
@@ -184,7 +186,7 @@ function install(callback) {
     toInstall.length = 0;
     visited.length = 0;
 
-    visit(args[0], process.cwd(), function(err) {
+    visit(args[0], npm.prefix, function(err) {
         if (err) return callback(err);
 
         if (toInstall.length === 0) {
