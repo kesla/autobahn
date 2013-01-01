@@ -139,9 +139,6 @@ function init(callback) {
         function loadNpm(done) {
             npm.load(function(err) {
                 if (err) return done(err);
-                // change to correct directory, so that `autobahn foo/bar.js` won't install 
-                // modules in ./node_modules/
-                npm.prefix = path.dirname(args[0]);
                 done(null);
             });
         },
