@@ -150,7 +150,17 @@ function init(callback) {
             var filePath = path.resolve(npm.prefix, 'package.json');
             fs.readFile(filePath, 'utf8', function(err, packageJson) {
                 if (err) {
-                    done(err.code === 'ENOENT' ? null : err);
+                    if (err.code === 'ENOENT') {
+                        if (!npm.config.get('save')) return done(null);
+
+                        // the package.json doesn't exist even though the setting
+                        // is to save the used packages. Let's create an empty
+                        // package.json
+                        fs.writeFile(filePath, JSON.stringify({}), done);
+                        return;
+                    }
+
+                    done(err);
                     return;
                 }
 
