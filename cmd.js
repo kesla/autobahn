@@ -29,20 +29,22 @@ var opts = {
 };
 var args = process.argv.slice(2);
 
-var arg;
-while (arg = args.shift()) {
+args.forEach(function(arg) {
     if (arg === '--watch' || arg === '-w') {
         opts.watch = true;
-    } else if (arg === '--save' || arg === '-s') {
-        opts.save = true;
-    } else if (arg === '--help' || arg === '-h') {
-        console.log(usage);
-        return;
-    } else {
-        args.unshift(path.resolve(arg));
-        break;
     }
-}
+    if (arg === '--save' || arg === '-s') {
+        opts.save = true;
+    }
+    if (arg === '--help' || arg === '-h') {
+        console.log(usage);
+        process.exit();
+    }
+});
+
+args = args.filter(function(arg) {
+    return arg !== '--watch' && arg !== '-w' && arg !== '--save' && arg !== '-s';
+});
 
 if (args.length === 0) {
     return console.log(usage);
@@ -193,7 +195,11 @@ function install(callback) {
     toInstall.length = 0;
     visited.length = 0;
 
-    visit(args[0], npm.prefix, function(err) {
+    var mainFile = args.filter(function(arg) {
+        return arg.slice(-3) === '.js';
+    })[0];
+    mainFile = path.resolve(mainFile);
+    visit(mainFile, npm.prefix, function(err) {
         if (err) return callback(err);
 
         if (toInstall.length === 0) {
@@ -211,7 +217,11 @@ function install(callback) {
 
 function fork() {
     log('(re)starting');
-    child = cp.spawn('node', args, { stdio: 'inherit' });
+
+    child = cp.exec('node ' + args.join(' '));
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
+    process.stdin.pipe(child.stdin);
     child.once('exit', function() {
         child = null;
         onexit.apply(null, arguments);
@@ -245,7 +255,7 @@ function watch() {
         function(err) {
             visited.forEach(function(file) {
                 if (watching.indexOf(file) === -1) {
-                    console.log('watching %s', file);
+                    log('watching %s', file);
                     watching.push(file);
                     fs.watchFile(file, { interval: 500 }, function() {
                         watching.forEach(fs.unwatchFile);
