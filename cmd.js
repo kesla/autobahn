@@ -218,7 +218,7 @@ function install(callback) {
 function fork() {
     log('(re)starting');
 
-    child = cp.exec('node ' + args.join(' '));
+    child = cp.spawn('node', args);
     child.stdout.pipe(process.stdout);
     child.stderr.pipe(process.stderr);
     process.stdin.pipe(child.stdin);
