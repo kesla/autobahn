@@ -5,14 +5,14 @@
     "bahn": "./cmd.js"
   },
   "dependencies": {
-    "async": "~0.1.22",
-    "colors": "~0.6.0-1",
-    "detective": "~0.2.1",
-    "graceful-fs": "~1.1.14",
-    "npm": "~1.1.65",
-    "resolve": "~0.2.3",
-    "semver": "~1.1.0",
-    "syntax-error": "0.0.0"
+    "async": "~2.1.2",
+    "colors": "~1.1.2",
+    "detective": "~4.3.2",
+    "graceful-fs": "~4.1.9",
+    "npm": "~3.10.9",
+    "resolve": "~1.1.7",
+    "semver": "~5.3.0",
+    "syntax-error": "1.1.6"
   },
   "description": "Run `autobahn` instead of `node`, get dependencies installed automatically (and more)",
   "devDependencies": {},
